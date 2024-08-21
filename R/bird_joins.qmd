@@ -1,0 +1,71 @@
+---
+title: "Bird Joins"
+author: "Leilanie Rubinstein"
+format: html
+execute:
+  warning: FALSE
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r}
+library(tidyverse)
+library(here)
+library(lubridate)
+library(janitor)
+```
+
+```{r}
+bird_observations <- read_csv(here::here("data", "52_pp52_birds_1.csv"))
+sites <- read_csv(here::here("data", "52_pp52_sites_1.csv"))
+surveys <- read_csv(here::here("data", "52_pp52_surveys_1.csv"))
+taxalist <- read_csv(here::here("data", "52_pp52_taxalist_1.csv"))
+```
+
+```{r}
+birds_subset <- bird_observations %>%
+  dplyr::filter(species_id %in% c("BHCO", "RWBL") & 
+                  site_id %in% c("LI-W", "NU-C"))
+```
+
+```{r}
+# left join practice
+birds_left <- birds_subset %>%
+  dplyr::left_join(., sites, 
+                   by = "site_id") %>%
+  dplyr::left_join(., taxalist, 
+                   by = "species_id")
+```
+
+```{r}
+# full join practice
+birds_full <- birds_subset %>%
+  dplyr::full_join(., sites,
+                   by = "site_id")
+```
+
+```{r}
+bird_observations <- bird_observations %>%
+  dplyr::rename("bird_obs_notes" = "notes")
+  
+bird_joins <- bird_observations %>%
+  dplyr::full_join(., taxalist,
+                   by = "species_id") %>%
+  dplyr::full_join(., sites,
+                   by = "site_id") %>%
+  dplyr::full_join(., surveys,
+                   by = "survey_id") %>%
+  dplyr::select(survey_date, common_name, park_name, bird_count)
+
+bird_joins_dates <- bird_joins %>%
+  dplyr::mutate(survey_month = lubridate::month(survey_date)) %>%
+  dplyr::mutate(survey_month = as.factor(survey_month)) %>%
+  dplyr::relocate(., survey_month, .after = survey_date)
+
+bird_summary <- bird_joins_dates %>%
+  dplyr::filter(park_name %in% 
+                  c("Lindo", "Orme", "Palomino", "Sonrisa")) %>%
+  dplyr::group_by(park_name, survey_month) %>%
+  dplyr::summarise(total_count = n()) 
+```
+
